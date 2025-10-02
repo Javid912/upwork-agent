@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+asyncpg
+playwright
+feedparser
+httpx
+pydantic
+python-dotenv
+pytest

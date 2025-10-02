@@ -1,0 +1,56 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: upwork_agent
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: upwork_agent_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=upwork_agent_db
+      - DB_POSTGRESDB_USER=upwork_agent
+      - DB_POSTGRESDB_PASSWORD=changeme
+    ports:
+      - "5678:5678"
+    depends_on:
+      - postgres
+
+  python-service:
+    build:
+      context: ./python-service
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./python-service/app:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

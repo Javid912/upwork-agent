@@ -19,7 +19,7 @@ class Database:
         async with self.pool.acquire() as conn:
             await conn.execute(
                 """
-                INSERT INTO jobs (job_id, title, description, url, budget_type, budget_amount, proposals_count, 
+                INSERT INTO jobs (job_id, title, description, url, budget_type, budget_amount, proposals_count,
                                   hires_count, interviewing_count, last_viewed, client_payment_verified, client_hire_rate,
                                   client_total_spent, client_location, required_skills, posted_date, raw)
                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
@@ -41,7 +41,7 @@ class Database:
                 job.get("client", {}).get("location"),
                 job.get("required_skills"),
                 job.get("posted_date"),
-                job
+                str(job)  # Convert dict to string for raw field
             )
         return True
 

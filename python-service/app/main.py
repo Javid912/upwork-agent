@@ -1,6 +1,7 @@
 # main.py
 import os
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from app.fetcher.rss_fetcher import fetch_jobs_from_rss
 from app.fetcher.playwright_fetcher import fetch_jobs_with_playwright
 from app.db import Database
@@ -8,8 +9,20 @@ from app.scoring import score_job
 from app.generator import generate_proposal_text
 from app.qc import run_qc
 
+class FetchPlaywrightRequest(BaseModel):
+    query: str
+    pages: int = 1
+
 app = FastAPI(title="Upwork Agent Service")
 db = Database()
+
+@app.get("/")
+async def root():
+    return {"message": "Upwork Agent Service", "status": "running"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "upwork-agent"}
 
 @app.on_event("startup")
 async def startup():
@@ -29,13 +42,17 @@ async def fetch_rss(feed_url: str):
     return {"inserted": inserted, "count": len(jobs)}
 
 @app.post("/fetch/playwright")
-async def fetch_playwright(query: str, pages: int = 1):
-    jobs = await fetch_jobs_with_playwright(query, pages=pages)
-    inserted = []
-    for job in jobs:
-        await db.upsert_job(job)
-        inserted.append(job["job_id"])
-    return {"inserted": inserted, "count": len(jobs)}
+async def fetch_playwright(request: FetchPlaywrightRequest):
+    try:
+        jobs = await fetch_jobs_with_playwright(request.query, pages=request.pages)
+        inserted = []
+        for job in jobs:
+            await db.upsert_job(job)
+            inserted.append(job["job_id"])
+        return {"inserted": inserted, "count": len(jobs)}
+    except Exception as e:
+        print(f"Error in fetch_playwright endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch jobs: {str(e)}")
 
 @app.post("/analyze/{job_id}")
 async def analyze_job(job_id: str):
